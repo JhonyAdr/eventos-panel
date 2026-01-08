@@ -1,0 +1,67 @@
+/// Configuración de Prisma
+/// - `generator client`: genera Prisma Client para usar en el código (lib/prisma.ts)
+/// - `datasource db`: define el proveedor (PostgreSQL) y toma la URL de conexión del entorno
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+/// Tabla de eventos
+model Event {
+  id          Int      @id @default(autoincrement())
+  title       String
+  description String?
+  date        DateTime
+  location    String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  changeLogs  EventChangeLog[]
+}
+
+/// Tabla de auditoría para cambios de eventos
+model EventChangeLog {
+  id         Int      @id @default(autoincrement())
+  eventId    Int
+  changeType String
+  field      String?
+  oldValue   String?
+  newValue   String?
+  createdAt  DateTime @default(now())
+
+  event      Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
+
+  @@index([eventId])
+  @@index([changeType])
+}
+
+/// Tabla de clientes
+model Client {
+  id        Int        @id @default(autoincrement())
+  name      String
+  email     String     @unique
+  phone     String?
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+  auditLogs AuditLog[]
+}
+
+/// Tabla de auditoría para cambios en clientes
+model AuditLog {
+  id        Int       @id @default(autoincrement())
+  action    String    // CREATE | UPDATE | DELETE
+  entity    String    @default("Client")
+  entityId  Int
+  before    Json?
+  after     Json?
+  user      String?
+  createdAt DateTime  @default(now())
+
+  client    Client?   @relation(fields: [entityId], references: [id], onDelete: Cascade)
+
+  @@index([entityId])
+}
